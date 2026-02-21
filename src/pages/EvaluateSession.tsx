@@ -12,6 +12,8 @@ import {
   PREPOPULATED_CONDITIONS,
   TEACHING_TOPIC_CATEGORIES,
   CLINICAL_OBJECTIVES,
+  CLINICAL_OBJECTIVES_V2,
+  expectationId,
 } from '../types';
 import { ScoreInput } from '../components/ScoreInput';
 
@@ -61,6 +63,9 @@ export function EvaluateSession() {
     if (form.weekNumber <= 30) return 'middle';
     return 'final';
   }, [form.weekNumber]);
+
+  // Effective phase: manual override takes priority over auto
+  const effectivePhase: Phase = form.phaseOverride || autoPhase;
 
   const updateForm = <K extends keyof SessionEvaluation>(key: K, value: SessionEvaluation[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -141,17 +146,17 @@ export function EvaluateSession() {
     setCustomTopicInputs(prev => ({ ...prev, [category]: '' }));
   };
 
-  const toggleObjective = (index: number) => {
+  const toggleObjective = (id: string) => {
     const current = form.objectivesAchieved || [];
-    if (current.includes(index)) {
-      updateForm('objectivesAchieved', current.filter(i => i !== index));
+    if (current.includes(id)) {
+      updateForm('objectivesAchieved', current.filter(i => i !== id));
     } else {
-      updateForm('objectivesAchieved', [...current, index]);
+      updateForm('objectivesAchieved', [...current, id]);
     }
   };
 
   const handleSave = () => {
-    const updated = { ...form, phase: autoPhase, updatedAt: new Date().toISOString() };
+    const updated = { ...form, phase: effectivePhase, updatedAt: new Date().toISOString() };
     if (existingEval) {
       updateEvaluation(updated);
     } else {
@@ -258,9 +263,27 @@ export function EvaluateSession() {
               />
               <p className="text-xs mt-1">
                 <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${PHASE_CONFIG[autoPhase].bgColor} ${PHASE_CONFIG[autoPhase].color} border ${PHASE_CONFIG[autoPhase].borderColor}`}>
-                  {PHASE_CONFIG[autoPhase].label} ({PHASE_CONFIG[autoPhase].weeks})
+                  Auto: {PHASE_CONFIG[autoPhase].label} ({PHASE_CONFIG[autoPhase].weeks})
                 </span>
               </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phase Override</label>
+              <select
+                value={form.phaseOverride || ''}
+                onChange={e => updateForm('phaseOverride', e.target.value ? (e.target.value as Phase) : undefined)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none"
+              >
+                <option value="">Auto (based on week)</option>
+                <option value="early">Early Phase</option>
+                <option value="middle">Middle Phase</option>
+                <option value="final">Final Phase</option>
+              </select>
+              {form.phaseOverride && (
+                <p className="text-xs mt-1 text-amber-600">
+                  ⚠️ Manual override active — using <strong>{PHASE_CONFIG[form.phaseOverride].label}</strong> instead of auto-detected {PHASE_CONFIG[autoPhase].label}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Session Type</label>
@@ -432,47 +455,72 @@ export function EvaluateSession() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div>
             <h3 className="font-bold text-slate-800 text-lg">🎯 Clinical Objectives (EPAs)</h3>
-            <p className="text-sm text-slate-400 mt-1">Check which objectives the student demonstrated during this session.</p>
+            <p className="text-sm text-slate-400 mt-1">
+              Check which expectations the student demonstrated during this session.
+              Showing <span className={`font-semibold ${PHASE_CONFIG[effectivePhase].color}`}>{PHASE_CONFIG[effectivePhase].label}</span> expectations.
+            </p>
             {previousObjectives.size > 0 && (
-              <p className="text-xs text-emerald-600 mt-1">✅ Green indicates objectives achieved in prior sessions.</p>
+              <p className="text-xs text-emerald-600 mt-1">✅ Green border indicates expectations achieved in prior sessions.</p>
             )}
           </div>
-          <div className="space-y-3">
-            {CLINICAL_OBJECTIVES.map((obj, i) => {
-              const checked = (form.objectivesAchieved || []).includes(i);
-              const prev = previousObjectives.has(i);
-              return (
-                <label
-                  key={i}
-                  className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                    checked
-                      ? 'bg-indigo-50 border-indigo-400'
-                      : prev
-                      ? 'bg-emerald-50 border-emerald-300'
-                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleObjective(i)}
-                    className="mt-0.5 w-4 h-4 accent-indigo-600 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-xs font-bold mr-2 ${checked ? 'text-indigo-600' : prev ? 'text-emerald-600' : 'text-slate-400'}`}>
-                      EPA {i + 1}
-                    </span>
-                    <span className={`text-sm ${checked ? 'text-indigo-800 font-medium' : prev ? 'text-emerald-700' : 'text-slate-600'}`}>
-                      {obj}
-                    </span>
-                    {prev && !checked && <span className="ml-2 text-xs text-emerald-500">✓ Previously achieved</span>}
+
+          {effectivePhase === 'early' ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+              Phase-specific expectations begin at the Middle Phase. Continue building foundational skills during Early Phase.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {CLINICAL_OBJECTIVES_V2.map((obj) => {
+                const phaseExpectations = effectivePhase === 'middle' ? obj.expectations.middle : obj.expectations.final;
+                return (
+                  <div key={obj.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                      <span className="text-xs font-bold text-indigo-600 mr-2">Outcome {obj.id}</span>
+                      <span className="text-sm font-semibold text-slate-800">{obj.outcome}</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {phaseExpectations.map((exp, ei) => {
+                        const id = expectationId(obj.id, effectivePhase === 'middle' ? 'middle' : 'final', ei);
+                        const checked = (form.objectivesAchieved || []).includes(id);
+                        const prev = previousObjectives.has(id);
+                        return (
+                          <label
+                            key={id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                              checked
+                                ? 'bg-indigo-50 border-indigo-400'
+                                : prev
+                                ? 'bg-emerald-50 border-emerald-300'
+                                : 'bg-white border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleObjective(id)}
+                              className="mt-0.5 w-4 h-4 accent-indigo-600 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-xs font-bold mr-1 ${checked ? 'text-indigo-600' : prev ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {String.fromCharCode(97 + ei)}.
+                              </span>
+                              <span className={`text-sm ${checked ? 'text-indigo-800 font-medium' : prev ? 'text-emerald-700' : 'text-slate-600'}`}>
+                                {exp}
+                              </span>
+                              {prev && !checked && <span className="ml-2 text-xs text-emerald-500">✓ Previously achieved</span>}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </label>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-700">
-            {(form.objectivesAchieved || []).length} of {CLINICAL_OBJECTIVES.length} objectives marked for this session
+            {(form.objectivesAchieved || []).length} expectation{(form.objectivesAchieved || []).length !== 1 ? 's' : ''} marked for this session
           </div>
         </div>
       )}
@@ -586,7 +634,10 @@ export function EvaluateSession() {
                 <p className="text-slate-400">Week / Phase</p>
                 <p className="font-semibold text-slate-800">
                   Week {form.weekNumber} •{' '}
-                  <span className={PHASE_CONFIG[autoPhase].color}>{PHASE_CONFIG[autoPhase].label}</span>
+                  <span className={PHASE_CONFIG[effectivePhase].color}>{PHASE_CONFIG[effectivePhase].label}</span>
+                  {form.phaseOverride && (
+                    <span className="ml-1 text-xs text-amber-600">(manual)</span>
+                  )}
                 </p>
               </div>
               <div>
@@ -636,10 +687,42 @@ export function EvaluateSession() {
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <h4 className="font-bold text-slate-800 mb-3">🎯 Clinical Objectives Achieved</h4>
               <div className="space-y-2">
-                {(form.objectivesAchieved || []).sort((a, b) => a - b).map(i => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
+                {CLINICAL_OBJECTIVES_V2.map(obj => {
+                  const achieved = (form.objectivesAchieved || []).filter(id =>
+                    typeof id === 'string' && (id.startsWith(`${obj.id}-middle-`) || id.startsWith(`${obj.id}-final-`))
+                  );
+                  if (achieved.length === 0) return null;
+                  return (
+                    <div key={obj.id}>
+                      <p className="text-xs font-bold text-indigo-600 mb-1">Outcome {obj.id}: {obj.outcome}</p>
+                      {achieved.map(id => {
+                        const parts = typeof id === 'string' ? id.split('-') : [];
+                        const phase = parts[1] as 'middle' | 'final' | undefined;
+                        const letter = parts[2];
+                        const idx = letter ? letter.charCodeAt(0) - 97 : -1;
+                        const text = phase && idx >= 0
+                          ? (obj.expectations[phase]?.[idx] || id)
+                          : String(id);
+                        return (
+                          <div key={String(id)} className="flex items-start gap-2 text-sm ml-3">
+                            <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>
+                            <span className="text-slate-600">
+                              <span className={`text-xs font-medium mr-1 ${phase === 'middle' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                [{phase}]
+                              </span>
+                              {letter}. {text}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {/* Backward compat: show legacy numeric objectives */}
+                {(form.objectivesAchieved || []).filter(id => typeof id === 'number').map(i => (
+                  <div key={String(i)} className="flex items-start gap-2 text-sm">
                     <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>
-                    <span className="text-slate-600"><span className="font-medium text-slate-700">EPA {i + 1}:</span> {CLINICAL_OBJECTIVES[i]}</span>
+                    <span className="text-slate-600"><span className="font-medium text-slate-700">EPA {Number(i) + 1}:</span> {CLINICAL_OBJECTIVES[Number(i)]}</span>
                   </div>
                 ))}
               </div>
