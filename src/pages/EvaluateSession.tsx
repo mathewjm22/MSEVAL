@@ -9,8 +9,14 @@ import {
   PHASE_CONFIG,
   Phase,
   DEFAULT_SCORES,
+  PREPOPULATED_CONDITIONS,
+  TEACHING_TOPIC_CATEGORIES,
+  CLINICAL_OBJECTIVES,
 } from '../types';
 import { ScoreInput } from '../components/ScoreInput';
+
+const STEPS = ['Session Details', 'Diagnoses & Conditions', 'Teaching Topics', 'Clinical Objectives', 'Clinical Scores', 'Feedback & Notes', 'Review & Submit'];
+const LAST_STEP = STEPS.length - 1;
 
 export function EvaluateSession() {
   const { data, addEvaluation, updateEvaluation } = useAppData();
@@ -37,11 +43,17 @@ export function EvaluateSession() {
       overallRating: 3,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      conditionsSeen: [],
+      customConditions: [],
+      teachingTopics: [],
+      objectivesAchieved: [],
     };
   });
 
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [customConditionInput, setCustomConditionInput] = useState('');
+  const [customTopicInputs, setCustomTopicInputs] = useState<Record<string, string>>({});
 
   // Auto-determine phase from week number
   const autoPhase = useMemo((): Phase => {
@@ -62,6 +74,81 @@ export function EvaluateSession() {
     const vals = Object.values(form.scores);
     return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
   }, [form.scores]);
+
+  // Previously seen conditions for the selected student
+  const previousConditions = useMemo(() => {
+    return new Set(
+      data.evaluations
+        .filter(e => e.studentId === form.studentId && e.id !== form.id)
+        .flatMap(e => [...(e.conditionsSeen || []), ...(e.customConditions || [])])
+    );
+  }, [data.evaluations, form.studentId, form.id]);
+
+  // Previously achieved objectives for the selected student
+  const previousObjectives = useMemo(() => {
+    return new Set(
+      data.evaluations
+        .filter(e => e.studentId === form.studentId && e.id !== form.id)
+        .flatMap(e => e.objectivesAchieved || [])
+    );
+  }, [data.evaluations, form.studentId, form.id]);
+
+  const toggleCondition = (condition: string) => {
+    const current = form.conditionsSeen || [];
+    if (current.includes(condition)) {
+      updateForm('conditionsSeen', current.filter(c => c !== condition));
+    } else {
+      updateForm('conditionsSeen', [...current, condition]);
+    }
+  };
+
+  const addCustomCondition = () => {
+    const val = customConditionInput.trim();
+    if (!val) return;
+    const current = form.customConditions || [];
+    if (!current.includes(val)) {
+      updateForm('customConditions', [...current, val]);
+    }
+    setCustomConditionInput('');
+  };
+
+  const removeCustomCondition = (cond: string) => {
+    updateForm('customConditions', (form.customConditions || []).filter(c => c !== cond));
+  };
+
+  const toggleTopic = (category: string, topic: string) => {
+    const current = form.teachingTopics || [];
+    const existing = current.find(t => t.category === category);
+    if (existing) {
+      const newTopics = existing.topics.includes(topic)
+        ? existing.topics.filter(t => t !== topic)
+        : [...existing.topics, topic];
+      const updated = current.map(t => t.category === category ? { ...t, topics: newTopics } : t);
+      updateForm('teachingTopics', updated.filter(t => t.topics.length > 0));
+    } else {
+      updateForm('teachingTopics', [...current, { category, topics: [topic] }]);
+    }
+  };
+
+  const getTopicsForCategory = (category: string) => {
+    return (form.teachingTopics || []).find(t => t.category === category)?.topics || [];
+  };
+
+  const addCustomTopic = (category: string) => {
+    const val = (customTopicInputs[category] || '').trim();
+    if (!val) return;
+    toggleTopic(category, val);
+    setCustomTopicInputs(prev => ({ ...prev, [category]: '' }));
+  };
+
+  const toggleObjective = (index: number) => {
+    const current = form.objectivesAchieved || [];
+    if (current.includes(index)) {
+      updateForm('objectivesAchieved', current.filter(i => i !== index));
+    } else {
+      updateForm('objectivesAchieved', [...current, index]);
+    }
+  };
 
   const handleSave = () => {
     const updated = { ...form, phase: autoPhase, updatedAt: new Date().toISOString() };
@@ -104,8 +191,6 @@ export function EvaluateSession() {
     );
   }
 
-  const STEPS = ['Session Details', 'Clinical Scores', 'Feedback & Notes', 'Review & Submit'];
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -118,12 +203,12 @@ export function EvaluateSession() {
       </div>
 
       {/* Step Indicator */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         {STEPS.map((s, i) => (
           <button
             key={i}
             onClick={() => setStep(i)}
-            className={`flex-1 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all ${
+            className={`flex-shrink-0 py-2 px-2 text-xs font-medium rounded-xl transition-all ${
               step === i
                 ? 'bg-indigo-600 text-white shadow-md'
                 : step > i
@@ -131,7 +216,7 @@ export function EvaluateSession() {
                 : 'bg-slate-100 text-slate-400'
             }`}
           >
-            {s}
+            {i + 1}. {s}
           </button>
         ))}
       </div>
@@ -203,8 +288,197 @@ export function EvaluateSession() {
         </div>
       )}
 
-      {/* Step 1: Clinical Scores */}
+      {/* Step 1: Diagnoses & Conditions */}
       {step === 1 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg">🩺 Diagnoses &amp; Conditions Seen</h3>
+            <p className="text-sm text-slate-400 mt-1">Check all conditions encountered during this session.</p>
+            {previousConditions.size > 0 && (
+              <p className="text-xs text-emerald-600 mt-1">✅ Green indicates previously seen in prior sessions.</p>
+            )}
+          </div>
+          {PREPOPULATED_CONDITIONS.map(({ category, conditions }) => (
+            <div key={category}>
+              <h4 className="text-sm font-semibold text-slate-600 mb-2">{category}</h4>
+              <div className="flex flex-wrap gap-2">
+                {conditions.map(cond => {
+                  const checked = (form.conditionsSeen || []).includes(cond);
+                  const prev = previousConditions.has(cond);
+                  return (
+                    <label
+                      key={cond}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-all ${
+                        checked
+                          ? 'bg-indigo-100 border-indigo-400 text-indigo-800 font-medium'
+                          : prev
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCondition(cond)}
+                        className="w-3.5 h-3.5 accent-indigo-600"
+                      />
+                      {prev && !checked && <span className="text-emerald-500">✓</span>}
+                      {cond}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {/* Custom conditions */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-600 mb-2">Custom Conditions</h4>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={customConditionInput}
+                onChange={e => setCustomConditionInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomCondition()}
+                placeholder="Add a custom condition..."
+                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+              />
+              <button
+                type="button"
+                onClick={addCustomCondition}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+            {(form.customConditions || []).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {(form.customConditions || []).map(cond => (
+                  <span key={cond} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-100 border border-purple-300 text-purple-800 text-sm">
+                    {cond}
+                    <button type="button" onClick={() => removeCustomCondition(cond)} className="text-purple-500 hover:text-purple-700 font-bold">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Teaching Topics */}
+      {step === 2 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg">📚 Teaching Topics</h3>
+            <p className="text-sm text-slate-400 mt-1">Select or add topics taught during this session, organized by body system.</p>
+          </div>
+          {TEACHING_TOPIC_CATEGORIES.map(({ category, topics }) => {
+            const selectedTopics = getTopicsForCategory(category);
+            return (
+              <div key={category} className="border border-slate-100 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                  {category}
+                  {selectedTopics.length > 0 && (
+                    <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{selectedTopics.length} selected</span>
+                  )}
+                </h4>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {topics.map(topic => {
+                    const checked = selectedTopics.includes(topic);
+                    return (
+                      <label
+                        key={topic}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-xs transition-all ${
+                          checked
+                            ? 'bg-indigo-100 border-indigo-400 text-indigo-800 font-medium'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleTopic(category, topic)}
+                          className="w-3 h-3 accent-indigo-600"
+                        />
+                        {topic}
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={customTopicInputs[category] || ''}
+                    onChange={e => setCustomTopicInputs(prev => ({ ...prev, [category]: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && addCustomTopic(category)}
+                    placeholder="Add custom topic..."
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addCustomTopic(category)}
+                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Step 3: Clinical Objectives */}
+      {step === 3 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg">🎯 Clinical Objectives (EPAs)</h3>
+            <p className="text-sm text-slate-400 mt-1">Check which objectives the student demonstrated during this session.</p>
+            {previousObjectives.size > 0 && (
+              <p className="text-xs text-emerald-600 mt-1">✅ Green indicates objectives achieved in prior sessions.</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            {CLINICAL_OBJECTIVES.map((obj, i) => {
+              const checked = (form.objectivesAchieved || []).includes(i);
+              const prev = previousObjectives.has(i);
+              return (
+                <label
+                  key={i}
+                  className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                    checked
+                      ? 'bg-indigo-50 border-indigo-400'
+                      : prev
+                      ? 'bg-emerald-50 border-emerald-300'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleObjective(i)}
+                    className="mt-0.5 w-4 h-4 accent-indigo-600 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-xs font-bold mr-2 ${checked ? 'text-indigo-600' : prev ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      EPA {i + 1}
+                    </span>
+                    <span className={`text-sm ${checked ? 'text-indigo-800 font-medium' : prev ? 'text-emerald-700' : 'text-slate-600'}`}>
+                      {obj}
+                    </span>
+                    {prev && !checked && <span className="ml-2 text-xs text-emerald-500">✓ Previously achieved</span>}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-700">
+            {(form.objectivesAchieved || []).length} of {CLINICAL_OBJECTIVES.length} objectives marked for this session
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Clinical Scores */}
+      {step === 4 && (
         <div className="space-y-4">
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center">
             <p className="text-sm text-indigo-700 font-medium">
@@ -229,8 +503,8 @@ export function EvaluateSession() {
         </div>
       )}
 
-      {/* Step 2: Feedback */}
-      {step === 2 && (
+      {/* Step 5: Feedback */}
+      {step === 5 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">💪 Strengths</label>
@@ -294,8 +568,8 @@ export function EvaluateSession() {
         </div>
       )}
 
-      {/* Step 3: Review */}
-      {step === 3 && (
+      {/* Step 6: Review */}
+      {step === 6 && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <h3 className="font-bold text-slate-800 text-lg mb-4">📋 Evaluation Summary</h3>
@@ -329,6 +603,48 @@ export function EvaluateSession() {
               </div>
             </div>
           </div>
+
+          {/* Conditions summary */}
+          {((form.conditionsSeen || []).length > 0 || (form.customConditions || []).length > 0) && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="font-bold text-slate-800 mb-3">🩺 Conditions Seen</h4>
+              <div className="flex flex-wrap gap-2">
+                {[...(form.conditionsSeen || []), ...(form.customConditions || [])].map(c => (
+                  <span key={c} className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-xs">{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Teaching topics summary */}
+          {(form.teachingTopics || []).length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="font-bold text-slate-800 mb-3">📚 Teaching Topics</h4>
+              <div className="space-y-2">
+                {(form.teachingTopics || []).map(({ category, topics }) => (
+                  <div key={category}>
+                    <span className="text-xs font-semibold text-slate-500">{category}: </span>
+                    <span className="text-xs text-slate-700">{topics.join(', ')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Objectives summary */}
+          {(form.objectivesAchieved || []).length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="font-bold text-slate-800 mb-3">🎯 Clinical Objectives Achieved</h4>
+              <div className="space-y-2">
+                {(form.objectivesAchieved || []).sort((a, b) => a - b).map(i => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>
+                    <span className="text-slate-600"><span className="font-medium text-slate-700">EPA {i + 1}:</span> {CLINICAL_OBJECTIVES[i]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <h4 className="font-bold text-slate-800 mb-3">Competency Scores</h4>
@@ -390,7 +706,7 @@ export function EvaluateSession() {
         >
           ← Previous
         </button>
-        {step < 3 ? (
+        {step < LAST_STEP ? (
           <button
             onClick={() => setStep(step + 1)}
             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200"

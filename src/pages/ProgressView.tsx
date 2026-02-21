@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppData } from '../context';
-import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, SCORE_LABELS } from '../types';
+import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, SCORE_LABELS, PREPOPULATED_CONDITIONS, TEACHING_TOPIC_CATEGORIES, CLINICAL_OBJECTIVES } from '../types';
 
 export function ProgressView() {
   const { data } = useAppData();
@@ -41,6 +41,41 @@ export function ProgressView() {
       lastAvg,
       sessions: studentEvals.length,
     };
+  }, [studentEvals]);
+
+  // Conditions tracking for selected student
+  const allConditionsSeen = useMemo(() => {
+    return new Set(studentEvals.flatMap(e => [...(e.conditionsSeen || []), ...(e.customConditions || [])]));
+  }, [studentEvals]);
+
+  // Teaching topics for selected student
+  const allTeachingTopics = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    studentEvals.forEach(e => {
+      (e.teachingTopics || []).forEach(({ category, topics }) => {
+        if (!map[category]) map[category] = new Set();
+        topics.forEach(t => map[category].add(t));
+      });
+    });
+    return map;
+  }, [studentEvals]);
+
+  // Objectives achieved for selected student across all evals
+  const allObjectivesAchieved = useMemo(() => {
+    return new Set(studentEvals.flatMap(e => e.objectivesAchieved || []));
+  }, [studentEvals]);
+
+  // For each objective, which eval(s) first achieved it
+  const objectiveFirstSession = useMemo(() => {
+    const result: Record<number, string> = {};
+    studentEvals.forEach(e => {
+      (e.objectivesAchieved || []).forEach(i => {
+        if (!(i in result)) {
+          result[i] = e.date;
+        }
+      });
+    });
+    return result;
   }, [studentEvals]);
 
   if (data.students.length === 0) {
@@ -212,6 +247,118 @@ export function ProgressView() {
           );
         })}
       </div>
+
+      {/* Conditions Tracker */}
+      {studentEvals.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-4">🩺 Conditions Tracker</h3>
+          <p className="text-sm text-slate-400 mb-4">
+            {allConditionsSeen.size} condition{allConditionsSeen.size !== 1 ? 's' : ''} seen across all sessions.
+          </p>
+          <div className="space-y-4">
+            {PREPOPULATED_CONDITIONS.map(({ category, conditions }) => {
+              const seenInCat = conditions.filter(c => allConditionsSeen.has(c));
+              const unseenInCat = conditions.filter(c => !allConditionsSeen.has(c));
+              if (seenInCat.length === 0 && unseenInCat.length === 0) return null;
+              return (
+                <div key={category}>
+                  <h4 className="text-sm font-semibold text-slate-600 mb-2">
+                    {category}
+                    <span className="ml-2 text-xs text-slate-400">{seenInCat.length}/{conditions.length}</span>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {conditions.map(cond => {
+                      const seen = allConditionsSeen.has(cond);
+                      return (
+                        <span
+                          key={cond}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                            seen
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                              : 'bg-slate-50 border-slate-200 text-slate-400'
+                          }`}
+                        >
+                          {seen && '✓ '}{cond}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Teaching Topics */}
+      {Object.keys(allTeachingTopics).length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-4">📚 Teaching Topics</h3>
+          <div className="space-y-4">
+            {TEACHING_TOPIC_CATEGORIES.map(({ category }) => {
+              const topics = allTeachingTopics[category];
+              if (!topics || topics.size === 0) return null;
+              return (
+                <div key={category}>
+                  <h4 className="text-sm font-semibold text-slate-600 mb-2">{category}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(topics).map(topic => (
+                      <span key={topic} className="px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-50 border border-teal-300 text-teal-700">
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Clinical Objectives */}
+      {studentEvals.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-2">🎯 Clinical Objectives (EPAs)</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 bg-slate-100 rounded-full h-3">
+              <div
+                className="h-3 rounded-full bg-purple-500 transition-all"
+                style={{ width: `${(allObjectivesAchieved.size / CLINICAL_OBJECTIVES.length) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-bold text-purple-700 whitespace-nowrap">
+              {allObjectivesAchieved.size} / {CLINICAL_OBJECTIVES.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {CLINICAL_OBJECTIVES.map((obj, i) => {
+              const achieved = allObjectivesAchieved.has(i);
+              const firstDate = objectiveFirstSession[i];
+              return (
+                <div
+                  key={i}
+                  className={`flex items-start gap-3 p-3 rounded-xl border ${
+                    achieved ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100'
+                  }`}
+                >
+                  <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs mt-0.5 ${
+                    achieved ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-slate-300'
+                  }`}>
+                    {achieved ? '✓' : ''}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-xs font-bold mr-1 ${achieved ? 'text-emerald-600' : 'text-slate-400'}`}>EPA {i + 1}</span>
+                    <span className={`text-sm ${achieved ? 'text-emerald-800' : 'text-slate-500'}`}>{obj}</span>
+                    {achieved && firstDate && (
+                      <p className="text-xs text-emerald-500 mt-0.5">First achieved: {firstDate}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Week-by-week timeline */}
       {studentEvals.length > 0 && (

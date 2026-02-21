@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAppData } from '../context';
-import { PHASE_CONFIG, Phase, SCORE_CATEGORIES } from '../types';
+import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, TEACHING_TOPIC_CATEGORIES, PREPOPULATED_CONDITIONS, CLINICAL_OBJECTIVES } from '../types';
 
 export function Dashboard() {
   const { data } = useAppData();
@@ -25,6 +25,23 @@ export function Dashboard() {
     const sum = evaluations.reduce((s, e) => s + e.scores[cat.key], 0);
     return { ...cat, avg: sum / totalEvals };
   });
+
+  // Teaching Topics: count how many times each category has been taught
+  const topicCategoryCounts = TEACHING_TOPIC_CATEGORIES.map(({ category }) => {
+    const count = evaluations.filter(e =>
+      (e.teachingTopics || []).some(t => t.category === category && t.topics.length > 0)
+    ).length;
+    return { category, count };
+  }).filter(({ count }) => count > 0);
+
+  // Total unique conditions seen across all evaluations
+  const allConditionsSeen = new Set(
+    evaluations.flatMap(e => [...(e.conditionsSeen || []), ...(e.customConditions || [])])
+  );
+  const totalPossibleConditions = PREPOPULATED_CONDITIONS.reduce((sum, { conditions }) => sum + conditions.length, 0);
+
+  // Clinical Objectives: count unique objectives achieved across all evaluations
+  const allObjectivesAchieved = new Set(evaluations.flatMap(e => e.objectivesAchieved || []));
 
   return (
     <div className="space-y-6">
@@ -84,6 +101,38 @@ export function Dashboard() {
         </Link>
       </div>
 
+      {/* Conditions & Objectives Summary Row */}
+      {totalEvals > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <h3 className="font-bold text-slate-800 text-base mb-3">🩺 Conditions Coverage</h3>
+            <div className="flex items-end gap-3">
+              <p className="text-3xl font-bold text-blue-600">{allConditionsSeen.size}</p>
+              <p className="text-sm text-slate-400 pb-1">/ {totalPossibleConditions} prepopulated conditions seen</p>
+            </div>
+            <div className="mt-2 w-full bg-slate-100 rounded-full h-2">
+              <div
+                className="h-2 rounded-full bg-blue-400 transition-all"
+                style={{ width: `${Math.min((allConditionsSeen.size / totalPossibleConditions) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <h3 className="font-bold text-slate-800 text-base mb-3">🎯 Clinical Objectives (EPAs)</h3>
+            <div className="flex items-end gap-3">
+              <p className="text-3xl font-bold text-purple-600">{allObjectivesAchieved.size}</p>
+              <p className="text-sm text-slate-400 pb-1">/ {CLINICAL_OBJECTIVES.length} objectives achieved</p>
+            </div>
+            <div className="mt-2 w-full bg-slate-100 rounded-full h-2">
+              <div
+                className="h-2 rounded-full bg-purple-400 transition-all"
+                style={{ width: `${Math.min((allObjectivesAchieved.size / CLINICAL_OBJECTIVES.length) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Phase Progress */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -142,6 +191,30 @@ export function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Teaching Topics */}
+      {topicCategoryCounts.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-4">📚 Teaching Topics Coverage</h3>
+          <p className="text-xs text-slate-400 mb-4">Body systems covered across all sessions (by number of sessions)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {topicCategoryCounts.map(({ category, count }) => (
+              <div key={category} className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 truncate">{category}</p>
+                  <div className="w-full bg-slate-100 rounded-full h-2 mt-1">
+                    <div
+                      className="h-2 rounded-full bg-teal-400 transition-all"
+                      style={{ width: `${Math.min((count / Math.max(totalEvals, 1)) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-slate-500 w-8 text-right">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Evaluations */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
