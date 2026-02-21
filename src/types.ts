@@ -45,6 +45,10 @@ export interface SessionEvaluation {
   overallRating: number;
   createdAt: string;
   updatedAt: string;
+  teachingTopics?: { category: string; topics: string[] }[];
+  conditionsSeen?: string[];
+  customConditions?: string[];
+  objectivesAchieved?: number[];
 }
 
 export interface AppData {
@@ -102,3 +106,52 @@ export const DEFAULT_SCORES: EvaluationScores = {
   teamwork: 3,
   initiative: 3,
 };
+
+export const TEACHING_TOPIC_CATEGORIES: { category: string; topics: string[] }[] = [
+  { category: 'Cardiovascular', topics: ['Chest pain', 'Heart failure', 'Arrhythmias', 'Hypertension', 'Valvular disease', 'Peripheral vascular disease', 'ASCVD', 'Syncope'] },
+  { category: 'Pulmonary/Respiratory', topics: ['Asthma', 'COPD', 'Pneumonia', 'Pulmonary embolism', 'Dyspnea', 'Cough', 'Pleural effusion', 'Lung cancer'] },
+  { category: 'Gastrointestinal', topics: ['Abdominal pain', 'GI bleed', 'Liver disease', 'GERD', 'Diarrhea', 'Constipation', 'Nausea/Vomiting', 'Jaundice', 'Hernia', 'Inflammatory bowel disease'] },
+  { category: 'Endocrinology', topics: ['Diabetes', 'Thyroid disorders', 'Obesity', 'Osteoporosis', 'Hyperlipidemia', 'Adrenal disorders', 'Metabolic syndrome'] },
+  { category: 'Neurology', topics: ['Headache', 'Stroke', 'Seizure', 'Dementia', 'Altered mental status', 'Dizziness', 'Neuropathy', 'Abnormal movements'] },
+  { category: 'Psychiatry/Behavioral Health', topics: ['Depression', 'Anxiety', 'Sleep disorders', 'Substance abuse', 'Chronic pain', 'PTSD', 'Bipolar disorder'] },
+  { category: 'Musculoskeletal', topics: ['Back pain', 'Osteoarthritis', 'Fractures', 'Rheumatologic conditions', 'Joint pain', 'Gout', 'Fibromyalgia'] },
+  { category: 'Renal/Urinary', topics: ['AKI', 'CKD', 'Hematuria', 'Dysuria', 'UTI', 'Electrolyte abnormalities', 'Nephrolithiasis'] },
+  { category: 'Hematology/Oncology', topics: ['Anemia', 'DVT/PE', 'Cancer screening', 'Lymphadenopathy', 'Thrombocytopenia', 'Leukemia/Lymphoma'] },
+  { category: 'Dermatology', topics: ['Rash', 'Skin cancer', 'Wound care', 'Eczema', 'Psoriasis', 'Cellulitis', 'Acne'] },
+  { category: 'Infectious Disease', topics: ['Fever', 'Pneumonia', 'UTI', 'Cellulitis', 'HIV', 'Sepsis', 'COVID-19', 'STI'] },
+  { category: "Women's Health", topics: ['Breast complaint', 'Pelvic pain', 'Abnormal uterine bleeding', 'Contraception', 'Menopause', 'Pregnancy complications', 'Cervical cancer screening'] },
+  { category: 'Preventive Medicine', topics: ['Cancer screening', 'Diet counseling', 'Disease prevention', 'Immunizations', 'Smoking cessation', 'Exercise counseling'] },
+  { category: 'Geriatrics', topics: ['Falls', 'Capacity evaluation', 'Polypharmacy', 'End-of-life care', 'Delirium', 'Frailty'] },
+  { category: 'Other/General', topics: ['Preop assessment', 'Failure to thrive', 'Toxic ingestion', 'Fatigue', 'Weight loss'] },
+];
+
+export const PREPOPULATED_CONDITIONS: { category: string; conditions: string[] }[] = [
+  { category: 'General/Pediatric', conditions: ['Fever', 'Failure to Thrive', 'Toxic Ingestion'] },
+  { category: 'Hematology', conditions: ['Anemia'] },
+  { category: 'GI', conditions: ['Acute Abdominal Pain', 'Jaundice/Hepatobiliary Disease', 'Diarrhea', 'Vomiting', 'GI Bleed', 'Hernia', 'Liver Disease'] },
+  { category: 'Pulmonary', conditions: ['Asthma', 'Cough', 'Pneumonia', 'COPD', 'Dyspnea'] },
+  { category: 'Cardiovascular', conditions: ['Hypertension', 'ASCVD', 'CHF', 'Syncope', 'DVT/PE'] },
+  { category: 'Dermatology', conditions: ['Rash', 'Skin Cancer'] },
+  { category: 'Neurology', conditions: ['Altered Mental Status', 'Headache', 'Dementia', 'Seizure', 'Abnormal Movements', 'Stroke', 'Vision Changes', 'Dizziness'] },
+  { category: 'Psychiatry', conditions: ['Anxiety', 'Depression', 'Chronic Pain', 'Sleep Disorders'] },
+  { category: 'Endocrine', conditions: ['Diabetes', 'Obesity', 'Osteoporosis', 'Thyroid Disorders', 'Hyperlipidemia'] },
+  { category: "Women's Health", conditions: ['Breast Complaint', 'Pelvic Pain', 'Abnormal Uterine Bleeding'] },
+  { category: 'Renal/Urinary', conditions: ['Hematuria', 'Dysuria', 'AKI', 'CKD'] },
+  { category: 'Musculoskeletal', conditions: ['Back Pain', 'Osteoarthritis', 'Rheumatologic Conditions', 'Fractures'] },
+  { category: 'Preventive Care', conditions: ['Capacity Evaluation', 'Cancer Screening', 'Diet Counseling', 'Disease Prevention'] },
+  { category: 'Other', conditions: ['Preop Assessment'] },
+];
+
+export const CLINICAL_OBJECTIVES: string[] = [
+  'Gather a comprehensive and accurate patient-centered history from an adult patient with a common clinical condition',
+  'Perform a physical examination for a medically stable adult patient with a common clinical condition',
+  'Develop an initial assessment (supported by clinical data), a prioritized differential diagnosis and problem list for an adult patient with a common clinical condition',
+  'Recommend and interpret common diagnostic tests in an adult patient with a common clinical condition',
+  'Provide preventive care and anticipatory guidance for health-care maintenance in adult patients',
+  'With support from faculty, develop an evidence-based patient-centered management plan for a common clinical condition for an adult',
+  'With support from faculty, organize the safe and efficient care of at least 2 hospitalized patients simultaneously',
+  'Provide written documentation of a patient encounter for an ambulatory adult patient with a common clinical condition',
+  'Provide written documentation of a patient encounter for a hospitalized adult patient with a common clinical condition',
+  'Present an ambulatory adult patient with a common clinical condition in an organized and efficient fashion',
+  'Present a hospitalized adult patient with a common clinical condition in an organized and efficient fashion using a problem-based approach',
+];
