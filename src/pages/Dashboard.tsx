@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAppData } from '../context';
-import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, TEACHING_TOPIC_CATEGORIES, PREPOPULATED_CONDITIONS, CLINICAL_OBJECTIVES } from '../types';
+import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, TEACHING_TOPIC_CATEGORIES, PREPOPULATED_CONDITIONS, TOTAL_OBJECTIVE_EXPECTATIONS } from '../types';
 
 export function Dashboard() {
   const { data } = useAppData();
@@ -40,8 +40,10 @@ export function Dashboard() {
   );
   const totalPossibleConditions = PREPOPULATED_CONDITIONS.reduce((sum, { conditions }) => sum + conditions.length, 0);
 
-  // Clinical Objectives: count unique objectives achieved across all evaluations
-  const allObjectivesAchieved = new Set(evaluations.flatMap(e => e.objectivesAchieved || []));
+  // Clinical Objectives: count unique string expectation IDs achieved across all evaluations (V2 format)
+  const allObjectivesAchieved = new Set(
+    evaluations.flatMap(e => (e.objectivesAchieved || []).filter(id => typeof id === 'string' && String(id).includes('-')))
+  );
 
   return (
     <div className="space-y-6">
@@ -121,12 +123,12 @@ export function Dashboard() {
             <h3 className="font-bold text-slate-800 text-base mb-3">🎯 Clinical Objectives (EPAs)</h3>
             <div className="flex items-end gap-3">
               <p className="text-3xl font-bold text-purple-600">{allObjectivesAchieved.size}</p>
-              <p className="text-sm text-slate-400 pb-1">/ {CLINICAL_OBJECTIVES.length} objectives achieved</p>
+              <p className="text-sm text-slate-400 pb-1">/ {TOTAL_OBJECTIVE_EXPECTATIONS} expectations achieved</p>
             </div>
             <div className="mt-2 w-full bg-slate-100 rounded-full h-2">
               <div
                 className="h-2 rounded-full bg-purple-400 transition-all"
-                style={{ width: `${Math.min((allObjectivesAchieved.size / CLINICAL_OBJECTIVES.length) * 100, 100)}%` }}
+                style={{ width: `${Math.min((allObjectivesAchieved.size / TOTAL_OBJECTIVE_EXPECTATIONS) * 100, 100)}%` }}
               />
             </div>
           </div>

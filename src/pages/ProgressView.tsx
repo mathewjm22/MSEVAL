@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useAppData } from '../context';
-import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, SCORE_LABELS, PREPOPULATED_CONDITIONS, TEACHING_TOPIC_CATEGORIES, CLINICAL_OBJECTIVES } from '../types';
+import { PHASE_CONFIG, Phase, SCORE_CATEGORIES, SCORE_LABELS, PREPOPULATED_CONDITIONS, TEACHING_TOPIC_CATEGORIES, CLINICAL_OBJECTIVES, CLINICAL_OBJECTIVES_V2, expectationId, TOTAL_OBJECTIVE_EXPECTATIONS, CLINICAL_SKILLS, ClinicalSkillRating } from '../types';
 
 export function ProgressView() {
-  const { data } = useAppData();
+  const { data, updateStudent } = useAppData();
   const [selectedStudent, setSelectedStudent] = useState<string>(data.students[0]?.id || '');
 
   const studentEvals = useMemo(() => {
@@ -67,16 +67,47 @@ export function ProgressView() {
 
   // For each objective, which eval(s) first achieved it
   const objectiveFirstSession = useMemo(() => {
-    const result: Record<number, string> = {};
+    const result: Record<string, string> = {};
     studentEvals.forEach(e => {
       (e.objectivesAchieved || []).forEach(i => {
-        if (!(i in result)) {
-          result[i] = e.date;
+        const key = String(i);
+        if (!(key in result)) {
+          result[key] = e.date;
         }
       });
     });
     return result;
   }, [studentEvals]);
+
+  // Clinical skill scores for selected student
+  const clinicalSkillScores = useMemo(() => {
+    return student?.clinicalSkillScores || [];
+  }, [student]);
+
+  const getSkillRating = (skillId: string): ClinicalSkillRating | undefined => {
+    return clinicalSkillScores.find(s => s.skillId === skillId)?.rating;
+  };
+
+  const toggleSkillRating = (skillId: string) => {
+    if (!student) return;
+    const current = student.clinicalSkillScores || [];
+    const existing = current.find(s => s.skillId === skillId);
+    let updated;
+    if (!existing || existing.rating === 'not-yet') {
+      updated = current.filter(s => s.skillId !== skillId).concat({
+        skillId,
+        rating: 'demonstrating' as ClinicalSkillRating,
+        date: new Date().toISOString().split('T')[0],
+      });
+    } else {
+      updated = current.filter(s => s.skillId !== skillId).concat({
+        skillId,
+        rating: 'not-yet' as ClinicalSkillRating,
+        date: new Date().toISOString().split('T')[0],
+      });
+    }
+    updateStudent({ ...student, clinicalSkillScores: updated });
+  };
 
   if (data.students.length === 0) {
     return (
@@ -323,39 +354,186 @@ export function ProgressView() {
             <div className="flex-1 bg-slate-100 rounded-full h-3">
               <div
                 className="h-3 rounded-full bg-purple-500 transition-all"
-                style={{ width: `${(allObjectivesAchieved.size / CLINICAL_OBJECTIVES.length) * 100}%` }}
+                style={{ width: `${(allObjectivesAchieved.size / Math.max(TOTAL_OBJECTIVE_EXPECTATIONS, 1)) * 100}%` }}
               />
             </div>
             <span className="text-sm font-bold text-purple-700 whitespace-nowrap">
-              {allObjectivesAchieved.size} / {CLINICAL_OBJECTIVES.length}
+              {allObjectivesAchieved.size} achieved
             </span>
           </div>
-          <div className="space-y-2">
-            {CLINICAL_OBJECTIVES.map((obj, i) => {
-              const achieved = allObjectivesAchieved.has(i);
-              const firstDate = objectiveFirstSession[i];
+          <div className="space-y-4">
+            {CLINICAL_OBJECTIVES_V2.map((obj) => {
+              const allExpIds = [
+                ...obj.expectations.middle.map((_, i) => expectationId(obj.id, 'middle', i)),
+                ...obj.expectations.final.map((_, i) => expectationId(obj.id, 'final', i)),
+              ];
+              const achievedCount = allExpIds.filter(id => allObjectivesAchieved.has(id)).length;
+
               return (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 p-3 rounded-xl border ${
-                    achieved ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100'
-                  }`}
-                >
-                  <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs mt-0.5 ${
-                    achieved ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-slate-300'
-                  }`}>
-                    {achieved ? '✓' : ''}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-xs font-bold mr-1 ${achieved ? 'text-emerald-600' : 'text-slate-400'}`}>EPA {i + 1}</span>
-                    <span className={`text-sm ${achieved ? 'text-emerald-800' : 'text-slate-500'}`}>{obj}</span>
-                    {achieved && firstDate && (
-                      <p className="text-xs text-emerald-500 mt-0.5">First achieved: {firstDate}</p>
-                    )}
+                <div key={obj.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className={`px-4 py-3 border-b border-slate-200 flex items-center justify-between ${achievedCount > 0 ? 'bg-purple-50' : 'bg-slate-50'}`}>
+                    <div>
+                      <span className="text-xs font-bold text-indigo-600 mr-2">Outcome {obj.id}</span>
+                      <span className="text-sm font-semibold text-slate-800">{obj.outcome}</span>
+                    </div>
+                    <span className="text-xs font-bold text-purple-700 whitespace-nowrap">{achievedCount}/{allExpIds.length}</span>
+                  </div>
+                  <div className="p-3 space-y-3">
+                    {(['middle', 'final'] as const).map(phase => (
+                      <div key={phase}>
+                        <p className={`text-xs font-bold uppercase mb-1 ${phase === 'middle' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          {phase === 'middle' ? 'Middle Phase' : 'Final Phase'}
+                        </p>
+                        <div className="space-y-1">
+                          {obj.expectations[phase].map((exp, ei) => {
+                            const id = expectationId(obj.id, phase, ei);
+                            const achieved = allObjectivesAchieved.has(id);
+                            const firstDate = objectiveFirstSession[id];
+                            return (
+                              <div
+                                key={id}
+                                className={`flex items-start gap-2 p-2 rounded-lg ${achieved ? 'bg-emerald-50' : 'bg-slate-50'}`}
+                              >
+                                <span className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center text-xs mt-0.5 ${
+                                  achieved ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'
+                                }`}>
+                                  {achieved ? '✓' : ''}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <span className={`text-xs font-bold mr-1 ${achieved ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                    {String.fromCharCode(97 + ei)}.
+                                  </span>
+                                  <span className={`text-xs ${achieved ? 'text-emerald-800' : 'text-slate-500'}`}>{exp}</span>
+                                  {achieved && firstDate && (
+                                    <p className="text-xs text-emerald-400 mt-0.5">First achieved: {firstDate}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
             })}
+            {/* Backward compat: show legacy numeric objectives */}
+            {Array.from(allObjectivesAchieved).filter(id => typeof id === 'number' || !isNaN(Number(id))).length > 0 && (
+              <div className="border border-slate-200 rounded-xl p-4">
+                <p className="text-xs font-bold text-slate-500 mb-2">Legacy Objectives</p>
+                {Array.from(allObjectivesAchieved)
+                  .filter(id => typeof id === 'number' || (!String(id).includes('-') && !isNaN(Number(id))))
+                  .map(id => (
+                    <div key={String(id)} className="flex items-start gap-2 text-xs text-slate-500 mt-1">
+                      <span className="text-emerald-500">✓</span>
+                      <span>EPA {Number(id) + 1}: {CLINICAL_OBJECTIVES[Number(id)]}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Clinical Skills Assessment */}
+      {student && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-1">🏅 Clinical Skills Assessment</h3>
+          <p className="text-sm text-slate-400 mb-4">Toggle each behavior to track the student's ongoing clinical skill development. Changes are saved immediately.</p>
+          <div className="space-y-6">
+            {CLINICAL_SKILLS.map(skill => (
+              <div key={skill.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
+                  <p className="text-xs font-bold text-indigo-500 uppercase mb-0.5">{skill.category}</p>
+                  <p className="text-sm font-semibold text-slate-800">{skill.title}</p>
+                </div>
+                <div className="p-4 space-y-5">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Minimal Expectations</p>
+                    <div className="space-y-2">
+                      {skill.minimalExpectations.map(beh => {
+                        const rating = getSkillRating(beh.id);
+                        const demonstrating = rating === 'demonstrating';
+                        return (
+                          <div
+                            key={beh.id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                              demonstrating ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleSkillRating(beh.id)}
+                              className={`flex-shrink-0 mt-0.5 w-8 h-5 rounded-full border-2 flex items-center transition-all ${
+                                demonstrating
+                                  ? 'bg-emerald-500 border-emerald-500 justify-end pr-0.5'
+                                  : 'bg-slate-200 border-slate-300 justify-start pl-0.5'
+                              }`}
+                              title={demonstrating ? 'Demonstrating Consistently' : 'Not Yet'}
+                            >
+                              <span className="w-3.5 h-3.5 rounded-full bg-white shadow-sm block" />
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-xs font-bold mr-1 ${demonstrating ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {beh.id.split('-').pop()}.
+                              </span>
+                              <span className={`text-sm ${demonstrating ? 'text-emerald-800' : 'text-slate-600'}`}>{beh.description}</span>
+                            </div>
+                            <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              demonstrating ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {demonstrating ? 'Demonstrating' : 'Not Yet'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Exemplary Behaviors</p>
+                    <div className="space-y-2">
+                      {skill.exemplaryBehaviors.map(beh => {
+                        const rating = getSkillRating(beh.id);
+                        const demonstrating = rating === 'demonstrating';
+                        return (
+                          <div
+                            key={beh.id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                              demonstrating ? 'bg-purple-50 border-purple-300' : 'bg-slate-50 border-slate-200'
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleSkillRating(beh.id)}
+                              className={`flex-shrink-0 mt-0.5 w-8 h-5 rounded-full border-2 flex items-center transition-all ${
+                                demonstrating
+                                  ? 'bg-purple-500 border-purple-500 justify-end pr-0.5'
+                                  : 'bg-slate-200 border-slate-300 justify-start pl-0.5'
+                              }`}
+                              title={demonstrating ? 'Demonstrating Consistently' : 'Not Yet'}
+                            >
+                              <span className="w-3.5 h-3.5 rounded-full bg-white shadow-sm block" />
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-xs font-bold mr-1 ${demonstrating ? 'text-purple-600' : 'text-slate-400'}`}>
+                                {beh.id.split('-').pop()}.
+                              </span>
+                              <span className={`text-sm ${demonstrating ? 'text-purple-800' : 'text-slate-600'}`}>{beh.description}</span>
+                            </div>
+                            <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              demonstrating ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {demonstrating ? 'Demonstrating' : 'Not Yet'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
