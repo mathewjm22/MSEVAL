@@ -135,36 +135,28 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Phase Progress */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-          <h3 className="font-bold text-slate-800 text-lg mb-4">📅 Phase Progress</h3>
-          <div className="space-y-4">
-            {(['early', 'middle', 'final'] as Phase[]).map((phase) => {
-              const config = PHASE_CONFIG[phase];
-              const count = phaseCount(phase);
-              return (
-                <div key={phase} className={`rounded-xl p-4 border ${config.bgColor} ${config.borderColor}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h4 className={`font-semibold ${config.color}`}>{config.label}</h4>
-                      <p className="text-xs text-slate-500">{config.weeks}</p>
-                    </div>
-                    <span className={`text-2xl font-bold ${config.color}`}>{count}</span>
-                  </div>
-                  <div className="w-full bg-white/50 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        phase === 'early' ? 'bg-blue-500' : phase === 'middle' ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${Math.min((count / Math.max(totalEvals, 1)) * 100, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      // Inside Dashboard.tsx, replace the block that starts with:
+// <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+//
+// with this slightly more structured one:
+
+      {/* Middle analytics row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left: phases + category averages */}
+        <div className="space-y-6 xl:col-span-2">
+          {/* Phase Progress */}
+          {/* ...your existing Phase Progress card... */}
+
+          {/* Category Averages */}
+          {/* ...your existing Category Averages card... */}
         </div>
+
+        {/* Right: conditions / objectives summary */}
+        <div className="space-y-4">
+          {/* Conditions & Objectives Summary Row */}
+          {/* ...your existing two small cards (conditions & objectives) */}
+        </div>
+      </div>
 
         {/* Category Averages */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
