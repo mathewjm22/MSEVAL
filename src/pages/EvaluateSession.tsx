@@ -539,17 +539,19 @@ export function EvaluateSession() {
               Rate each competency from 1 (Below Expectations) to 5 (Outstanding)
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {SCORE_CATEGORIES.map(cat => (
-              <ScoreInput
-                key={cat.key}
-                label={cat.label}
-                description={cat.description}
-                value={form.scores[cat.key]}
-                onChange={v => updateScore(cat.key, v)}
-              />
-            ))}
-          </div>
+// ... inside the Step 4: Clinical Scores section ...
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  {SCORE_CATEGORIES.map(cat => (
+    <ScoreInput
+      key={cat.key}
+      label={cat.label}
+      description={cat.description}
+      value={form.scores[cat.key]}
+      onChange={v => updateScore(cat.key, v)}
+      rubrics={cat.rubrics} // <--- ADD THIS LINE
+    />
+  ))}
+</div>
           <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
             <p className="text-sm text-slate-500">Category Average</p>
             <p className="text-3xl font-bold text-indigo-600">{avgScore}</p>
