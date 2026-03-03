@@ -78,11 +78,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Clinical Knowledge',
     description: 'Medical knowledge, pathophysiology, pharmacology',
     rubrics: {
-      1: 'Significant knowledge gaps; frequently unable to apply basic sciences to clinical scenarios.',
-      2: 'Developing knowledge; makes occasional errors in application; needs frequent guidance.',
-      3: 'Solid foundational knowledge; accurately applies knowledge to common clinical presentations.',
-      4: 'Strong knowledge base; effectively applies complex concepts; understands nuances.',
-      5: 'Exceptional depth; demonstrates mastery and teaches others; integrates complex pathophysiology.',
+      1: 'Significant knowledge gaps...',
+      2: 'Developing knowledge...',
+      3: 'Solid foundational knowledge...',
+      4: 'Strong knowledge base...',
+      5: 'Exceptional depth...',
     },
   },
   {
