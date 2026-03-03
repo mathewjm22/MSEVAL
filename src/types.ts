@@ -1,5 +1,5 @@
 export type Phase = 'early' | 'middle' | 'final';
-
+export type RubricMap = Record<number, string>;
 export interface PreceptorProfile {
   name: string;
   title: string;
