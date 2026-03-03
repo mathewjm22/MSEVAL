@@ -16,7 +16,13 @@ import {
   expectationId,
 } from '../types';
 import { ScoreInput } from '../components/ScoreInput';
-
+  // Helper to insert text into textareas
+  const insertPhrase = (field: 'strengths' | 'areasForImprovement' | 'actionPlan', phrase: string) => {
+    const currentText = form[field] || '';
+    // Add a newline if there's existing text, then the phrase
+    const newText = currentText ? `${currentText}\n${phrase}` : phrase;
+    updateForm(field, newText);
+  };
 const STEPS = ['Session Details', 'Diagnoses & Conditions', 'Teaching Topics', 'Clinical Objectives', 'Clinical Scores', 'Feedback & Notes', 'Review & Submit'];
 const LAST_STEP = STEPS.length - 1;
 
