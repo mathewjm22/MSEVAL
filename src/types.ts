@@ -68,20 +68,21 @@ export const SCORE_LABELS: Record<number, string> = {
   5: 'Outstanding',
 };
 
-// Define the structure for our anchored rubrics
+// New Rubric Type
 export type RubricMap = Record<number, string>;
 
+// Updated Categories with Rubrics
 export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; description: string; rubrics: RubricMap }[] = [
   {
     key: 'clinicalKnowledge',
     label: 'Clinical Knowledge',
     description: 'Medical knowledge, pathophysiology, pharmacology',
     rubrics: {
-      1: 'Significant knowledge gaps in basic sciences; frequently unable to apply knowledge to clinical scenarios.',
-      2: 'Knowledge base is developing but inconsistent; makes occasional errors in applying basic concepts.',
+      1: 'Significant knowledge gaps; frequently unable to apply basic sciences to clinical scenarios.',
+      2: 'Developing knowledge; makes occasional errors in application; needs frequent guidance.',
       3: 'Solid foundational knowledge; accurately applies knowledge to common clinical presentations.',
-      4: 'Strong knowledge base; effectively applies complex concepts; understands nuances in management.',
-      5: 'Exceptional depth of knowledge; demonstrates mastery of complex pathophysiology and pharmacology; teaches others.',
+      4: 'Strong knowledge base; effectively applies complex concepts; understands nuances.',
+      5: 'Exceptional depth; demonstrates mastery and teaches others; integrates complex pathophysiology.',
     },
   },
   {
@@ -89,11 +90,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Clinical Reasoning',
     description: 'Differential diagnosis, diagnostic workup, treatment planning',
     rubrics: {
-      1: 'Unable to generate a differential diagnosis; misses critical findings; disorganized approach.',
-      2: 'Generates a basic differential but lacks prioritization; workup is often incomplete.',
-      3: 'Develops a prioritized differential for common conditions; orders appropriate initial workup.',
-      4: 'Efficiently prioritizes diagnoses; integrates data to refine plans; anticipates complications.',
-      5: 'Sophisticated reasoning; considers rare conditions appropriately; highly efficient and accurate diagnostic planning.',
+      1: 'Unable to generate a differential; misses critical findings; disorganized approach.',
+      2: 'Generates basic differential but lacks prioritization; workup often incomplete.',
+      3: 'Develops prioritized differential for common conditions; appropriate initial workup.',
+      4: 'Efficiently prioritizes; integrates data to refine plans; anticipates complications.',
+      5: 'Sophisticated reasoning; considers rare conditions appropriately; highly efficient diagnostic planning.',
     },
   },
   {
@@ -101,11 +102,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Patient Communication',
     description: 'History taking, patient education, empathy',
     rubrics: {
-      1: 'Disorganized history; misses critical information; lacks empathy or respect for patient autonomy.',
-      2: 'Gathers basic history but misses social context; communication is functional but lacks depth.',
-      3: 'Conducts a complete patient-centered history; demonstrates empathy; explains plans clearly.',
-      4: 'Adapts communication style to diverse patients; handles difficult conversations effectively.',
-      5: 'Exceptional rapport; addresses all psychosocial dimensions; patient feels deeply heard and cared for.',
+      1: 'Disorganized history; misses critical info; lacks empathy or respect for autonomy.',
+      2: 'Gathers basic history but misses context; communication is functional but lacks depth.',
+      3: 'Conducts complete patient-centered history; demonstrates empathy; explains plans clearly.',
+      4: 'Adapts style to diverse patients; handles difficult conversations effectively.',
+      5: 'Exceptional rapport; addresses all psychosocial dimensions; patient feels deeply heard.',
     },
   },
   {
@@ -113,11 +114,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Professional Behavior',
     description: 'Punctuality, ethics, appearance, responsibility',
     rubrics: {
-      1: 'Frequently late or unprepared; dishonest or unethical behavior reported.',
-      2: 'Occasional lapsses in punctuality or preparedness; needs reminders about professional standards.',
-      3: 'Consistently punctual, prepared, and dressed appropriately; maintains patient confidentiality.',
-      4: 'Role model for professional behavior; proactive in team duties; demonstrates high integrity.',
-      5: 'Exemplary professionalism; leads by example; advocates for patients and the profession.',
+      1: 'Frequently late/unprepared; lapses in integrity or ethical standards.',
+      2: 'Occasional lapses in punctuality or preparedness; needs reminders.',
+      3: 'Consistently punctual, prepared, and professionally dressed; maintains confidentiality.',
+      4: 'Role model behavior; proactive in team duties; demonstrates high integrity.',
+      5: 'Exemplary professionalism; leads by example; advocates for patients and profession.',
     },
   },
   {
@@ -125,11 +126,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Technical/Procedural Skills',
     description: 'Physical exam, procedures, clinical techniques',
     rubrics: {
-      1: 'Unable to perform basic physical exam maneuvers correctly; causes patient discomfort.',
-      2: 'Performs basic maneuvers but technique is awkward; frequently misses subtle findings.',
-      3: 'Performs complete and accurate physical exams for common conditions; maintains patient comfort.',
-      4: 'Highly skilled technique; identifies subtle findings; adapts exam to clinical context.',
-      5: 'Mastery of advanced exam techniques; excellent procedural competence; teaches skills to peers.',
+      1: 'Unable to perform basic maneuvers correctly; causes patient discomfort.',
+      2: 'Performs basic maneuvers but technique is awkward; often misses subtle findings.',
+      3: 'Performs accurate exams for common conditions; maintains patient comfort.',
+      4: 'Highly skilled technique; identifies subtle findings; adapts exam to context.',
+      5: 'Mastery of advanced techniques; excellent procedural competence; teaches peers.',
     },
   },
   {
@@ -137,11 +138,11 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Documentation',
     description: 'Notes, orders, prescriptions, referrals',
     rubrics: {
-      1: 'Notes are incomplete, illegible, or inaccurate; documentation is frequently delayed.',
-      2: 'Notes are complete but verbose or disorganized; occasional omissions in the assessment/plan.',
-      3: 'Accurate, timely, and organized documentation for common encounters; follows standard format.',
-      4: 'Concise, highly organized notes; excellent problem representation; anticipates billing/coding needs.',
-      5: 'Exemplary documentation; notes are clinically insightful; serves as a model for others.',
+      1: 'Incomplete, inaccurate, or delayed documentation.',
+      2: 'Complete but verbose/disorganized; occasional omissions in plan.',
+      3: 'Accurate, timely, organized documentation for common encounters.',
+      4: 'Concise, insightful notes; anticipates billing/coding; excellent problem representation.',
+      5: 'Exemplary documentation; serves as a model; clinically insightful.',
     },
   },
   {
@@ -149,10 +150,10 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Teamwork & Collaboration',
     description: 'Interprofessional communication, consultations',
     rubrics: {
-      1: 'Works in isolation; disrespectful to staff; fails to communicate critical information.',
-      2: 'Communicates basic needs but does not actively engage with the broader care team.',
-      3: 'Communicates effectively with nurses and staff; respects team roles; responds to calls/pages.',
-      4: 'Proactively collaborates with interdisciplinary team; facilitates smooth care transitions.',
+      1: 'Works in isolation; disrespectful to staff; fails to communicate critical info.',
+      2: 'Communicates basic needs but does not actively engage with broader team.',
+      3: 'Communicates effectively with nurses/staff; respects roles; responsive.',
+      4: 'Proactively collaborates; facilitates smooth care transitions.',
       5: 'Leader in team dynamics; effectively coordinates complex care; improves team function.',
     },
   },
@@ -161,10 +162,10 @@ export const SCORE_CATEGORIES: { key: keyof EvaluationScores; label: string; des
     label: 'Initiative & Self-Directed Learning',
     description: 'Proactive learning, literature review, questions',
     rubrics: {
-      1: 'Passive learner; waits to be told what to study; disengaged from learning opportunities.',
-      2: 'Completes assigned tasks but rarely seeks additional knowledge or clinical experience.',
-      3: 'Asks relevant questions; reads about patient cases; seeks feedback on performance.',
-      4: 'Consistently brings new evidence to rounds; identifies own knowledge gaps and addresses them.',
+      1: 'Passive learner; waits to be told what to study; disengaged.',
+      2: 'Completes tasks but rarely seeks additional knowledge or experience.',
+      3: 'Asks relevant questions; reads about cases; seeks feedback.',
+      4: 'Brings new evidence to rounds; identifies own knowledge gaps and addresses them.',
       5: 'Highly self-motivated; drives own learning curriculum; engages in scholarly activity.',
     },
   },
