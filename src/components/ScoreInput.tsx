@@ -6,7 +6,7 @@ interface ScoreInputProps {
   description: string;
   value: number;
   onChange: (v: number) => void;
-  rubrics: RubricMap; // Added rubrics prop
+  rubrics: RubricMap;
 }
 
 const SCORE_COLORS: Record<number, string> = {
@@ -31,7 +31,7 @@ export function ScoreInput({ label, description, value, onChange, rubrics }: Sco
         <button
           type="button"
           onClick={() => setShowAll(!showAll)}
-          className="text-xs text-indigo-600 hover:underline cursor-pointer"
+          className="text-xs text-indigo-600 hover:underline cursor-pointer focus:outline-none"
         >
           {showAll ? 'Hide Rubrics' : 'View Rubrics'}
         </button>
