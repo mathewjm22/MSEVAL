@@ -1,102 +1,238 @@
 import { useState } from 'react';
-import { Search, Plus, Filter, MoreVertical, Mail, Phone } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import { useAppData } from '../context';
+import { StudentProfile } from '../types';
 
-const mockStudents = [
-  { id: 1, name: 'Alice Johnson', email: 'alice@example.com', phone: '(555) 123-4567', status: 'active', lastEval: '2 days ago', avgScore: '92%' },
-  { id: 2, name: 'Bob Smith', email: 'bob@example.com', phone: '(555) 234-5678', status: 'pending', lastEval: '1 week ago', avgScore: '-' },
-  { id: 3, name: 'Carol White', email: 'carol@example.com', phone: '(555) 345-6789', status: 'active', lastEval: '3 days ago', avgScore: '88%' },
-  { id: 4, name: 'David Brown', email: 'david@example.com', phone: '(555) 456-7890', status: 'active', lastEval: '1 day ago', avgScore: '95%' },
-  { id: 5, name: 'Emma Davis', email: 'emma@example.com', phone: '(555) 567-8901', status: 'inactive', lastEval: '2 weeks ago', avgScore: '85%' },
-];
+const EMPTY_STUDENT: Omit<StudentProfile, 'id'> = {
+  name: '',
+  email: '',
+  program: '',
+  yearLevel: '',
+  startDate: '',
+};
 
 export function Students() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const { data, addStudent, updateStudent, deleteStudent } = useAppData();
+  const [editing, setEditing] = useState<StudentProfile | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const handleNew = () => {
+    setEditing({ ...EMPTY_STUDENT, id: uuidv4() });
+    setIsNew(true);
+  };
+
+  const handleEdit = (s: StudentProfile) => {
+    setEditing({ ...s });
+    setIsNew(false);
+  };
+
+  const handleSave = () => {
+    if (!editing || !editing.name.trim()) return;
+    if (isNew) {
+      addStudent(editing);
+    } else {
+      updateStudent(editing);
+    }
+    setEditing(null);
+    setIsNew(false);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteStudent(id);
+    setShowDeleteConfirm(null);
+  };
+
+  const evalCount = (id: string) => data.evaluations.filter(e => e.studentId === id).length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Students</h1>
-          <p className="text-[#94a3b8]">Manage and evaluate your students</p>
+          <h2 className="text-2xl font-bold text-slate-800">👨‍🎓 Students</h2>
+          <p className="text-sm text-slate-400 mt-1">Manage your student roster</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Student
+        <button
+          onClick={handleNew}
+          className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200"
+        >
+          + Add Student
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="glass-panel p-4 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
-          <input
-            type="text"
-            placeholder="Search students..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Student Cards */}
+      {data.students.length === 0 && !editing ? (
+        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+          <div className="text-5xl mb-4">👨‍🎓</div>
+          <h3 className="text-lg font-semibold text-slate-700">No students yet</h3>
+          <p className="text-sm text-slate-400 mt-2 mb-6">Add your first student to start creating evaluations.</p>
+          <button
+            onClick={handleNew}
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
+          >
+            + Add First Student
+          </button>
         </div>
-        <button className="btn-secondary flex items-center gap-2">
-          <Filter className="w-4 h-4" />
-          Filter
-        </button>
-      </div>
-
-      {/* Students Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockStudents.map((student) => (
-          <div key={student.id} className="glass-card p-6 group">
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#ff00a0] flex items-center justify-center text-[#0a0c0f] font-bold text-lg shadow-[0_0_20px_rgba(0,240,255,0.3)]">
-                {student.name.split(' ').map(n => n[0]).join('')}
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {data.students.map((student) => (
+            <div key={student.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {student.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">{student.name}</h3>
+                    <p className="text-xs text-slate-400">{student.program} • {student.yearLevel}</p>
+                  </div>
+                </div>
               </div>
-              <button className="p-2 rounded-lg hover:bg-[#2f3741] transition-colors">
-                <MoreVertical className="w-4 h-4 text-[#64748b]" />
-              </button>
-            </div>
-
-            <h3 className="text-lg font-bold text-[#f0f4f8] mb-1">{student.name}</h3>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
-                <Mail className="w-4 h-4" />
-                <span>{student.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
-                <Phone className="w-4 h-4" />
-                <span>{student.phone}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mb-4">
-              <span className={`badge ${
-                student.status === 'active' ? 'badge-success' :
-                student.status === 'pending' ? 'badge-warning' :
-                'badge-danger'
-              }`}>
-                {student.status}
-              </span>
-              <span className="text-xs text-[#64748b]">{student.lastEval}</span>
-            </div>
-
-            <div className="border-t border-[#2f3741] pt-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#64748b] mb-1">Average Score</p>
-                <p className={`text-xl font-bold ${
-                  student.avgScore === '-' ? 'text-[#64748b]' : 'text-gradient'
-                }`}>
-                  {student.avgScore}
+              <div className="mt-4 space-y-1.5 text-sm text-slate-500">
+                {student.email && (
+                  <p className="flex items-center gap-2">
+                    <span>📧</span> {student.email}
+                  </p>
+                )}
+                {student.startDate && (
+                  <p className="flex items-center gap-2">
+                    <span>📅</span> Started: {student.startDate}
+                  </p>
+                )}
+                <p className="flex items-center gap-2">
+                  <span>📝</span> {evalCount(student.id)} evaluation{evalCount(student.id) !== 1 ? 's' : ''}
                 </p>
               </div>
-              <button className="btn-secondary text-xs py-2 px-4">
-                Evaluate
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => handleEdit(student)}
+                  className="flex-1 text-sm px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                >
+                  Edit
+                </button>
+                {showDeleteConfirm === student.id ? (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleDelete(student.id)}
+                      className="text-sm px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(null)}
+                      className="text-sm px-3 py-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowDeleteConfirm(student.id)}
+                    className="text-sm px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Edit/Add Modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setEditing(null); setIsNew(false); }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">
+              {isNew ? '➕ Add New Student' : '✏️ Edit Student'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={editing.name}
+                  onChange={e => setEditing({ ...editing, name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  placeholder="e.g., Jane Smith"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editing.email}
+                  onChange={e => setEditing({ ...editing, email: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  placeholder="student@university.edu"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Program</label>
+                  <select
+                    value={editing.program}
+                    onChange={e => setEditing({ ...editing, program: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  >
+                    <option value="">Select...</option>
+                    <option value="MD">MD</option>
+                    <option value="DO">DO</option>
+                    <option value="PA">PA</option>
+                    <option value="NP">NP</option>
+                    <option value="Residency">Residency</option>
+                    <option value="Fellowship">Fellowship</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Year Level</label>
+                  <select
+                    value={editing.yearLevel}
+                    onChange={e => setEditing({ ...editing, yearLevel: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  >
+                    <option value="">Select...</option>
+                    <option value="MS-1">MS-1</option>
+                    <option value="MS-2">MS-2</option>
+                    <option value="MS-3">MS-3</option>
+                    <option value="MS-4">MS-4</option>
+                    <option value="PGY-1">PGY-1</option>
+                    <option value="PGY-2">PGY-2</option>
+                    <option value="PGY-3">PGY-3</option>
+                    <option value="PGY-4">PGY-4</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={editing.startDate}
+                  onChange={e => setEditing({ ...editing, startDate: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3 justify-end">
+              <button
+                onClick={() => { setEditing(null); setIsNew(false); }}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!editing.name.trim()}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
+              >
+                {isNew ? 'Add Student' : 'Save Changes'}
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
