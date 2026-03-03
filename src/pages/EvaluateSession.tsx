@@ -557,11 +557,25 @@ export function EvaluateSession() {
         </div>
       )}
 
-      {/* Step 5: Feedback */}
+            {/* Step 5: Feedback */}
       {step === 5 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+          
+          {/* Strengths Section */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">💪 Strengths</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">💪 Strengths</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {['Excellent rapport', 'Thorough history', 'Great presentation', 'Insightful reasoning'].map(phrase => (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => insertPhrase('strengths', phrase)}
+                  className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-medium hover:bg-emerald-100 transition-colors"
+                >
+                  + {phrase}
+                </button>
+              ))}
+            </div>
             <textarea
               value={form.strengths}
               onChange={e => updateForm('strengths', e.target.value)}
@@ -570,8 +584,22 @@ export function EvaluateSession() {
               placeholder="What did the student do well today?"
             />
           </div>
+
+          {/* Areas for Improvement Section */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">🎯 Areas for Improvement</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">🎯 Areas for Improvement</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {['Focus on pertinent negatives', 'Time management', 'Review anatomy', 'Differential diagnosis'].map(phrase => (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => insertPhrase('areasForImprovement', phrase)}
+                  className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-full text-xs font-medium hover:bg-amber-100 transition-colors"
+                >
+                  + {phrase}
+                </button>
+              ))}
+            </div>
             <textarea
               value={form.areasForImprovement}
               onChange={e => updateForm('areasForImprovement', e.target.value)}
@@ -580,6 +608,7 @@ export function EvaluateSession() {
               placeholder="What areas need more work?"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">📋 Action Plan / Goals</label>
             <textarea
@@ -590,6 +619,7 @@ export function EvaluateSession() {
               placeholder="Specific goals or tasks for next session..."
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">📝 Preceptor Notes (private)</label>
             <textarea
@@ -600,6 +630,7 @@ export function EvaluateSession() {
               placeholder="Additional notes for your records..."
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">⭐ Overall Session Rating</label>
             <div className="flex items-center gap-3">
