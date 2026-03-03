@@ -4,17 +4,11 @@ import { PreceptorProfile } from '../types';
 import { exportToJSON } from '../store';
 import { downloadAsFile, uploadFromFile, initGoogleAPI, saveToGoogleDrive, loadFromGoogleDrive } from '../googleDrive';
 
-// Your provided Google Client ID
-const DEFAULT_GOOGLE_CLIENT_ID = "1047921307956-bbtpdhhigflsn6aoa5geu7rqvq7h03qj.apps.googleusercontent.com";
-
 export function Settings() {
   const { data, updatePreceptor, importData } = useAppData();
   const [profile, setProfile] = useState<PreceptorProfile>({ ...data.preceptor });
   const [profileSaved, setProfileSaved] = useState(false);
-  
-  // Use default ID if nothing in local storage
-  const [gdClientId, setGdClientId] = useState(() => localStorage.getItem('gd_client_id') || DEFAULT_GOOGLE_CLIENT_ID);
-  
+  const [gdClientId, setGdClientId] = useState(() => localStorage.getItem('gd_client_id') || '');
   const [gdStatus, setGdStatus] = useState<'idle' | 'loading' | 'connected' | 'error'>('idle');
   const [gdMessage, setGdMessage] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
@@ -44,15 +38,14 @@ export function Settings() {
   };
 
   const handleConnectGoogleDrive = async () => {
-    const clientIdToUse = gdClientId.trim();
-    if (!clientIdToUse) {
+    if (!gdClientId.trim()) {
       setGdMessage('Please enter a Google Cloud Client ID');
       return;
     }
-    localStorage.setItem('gd_client_id', clientIdToUse);
+    localStorage.setItem('gd_client_id', gdClientId);
     setGdStatus('loading');
     try {
-      const ok = await initGoogleAPI(clientIdToUse);
+      const ok = await initGoogleAPI(gdClientId);
       if (ok) {
         setGdStatus('connected');
         setGdMessage('Connected to Google Drive!');
@@ -203,7 +196,7 @@ export function Settings() {
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <h3 className="font-bold text-slate-800 text-lg mb-2">☁️ Google Drive Sync</h3>
         <p className="text-sm text-slate-400 mb-4">
-          Save and load your evaluations to/from Google Drive.
+          Save and load your evaluations to/from Google Drive. You'll need a Google Cloud Client ID for OAuth.
         </p>
 
         <div className="space-y-4">
@@ -230,6 +223,18 @@ export function Settings() {
                 {gdMessage}
               </p>
             )}
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <h4 className="font-medium text-slate-700 text-sm mb-2">Setup Instructions:</h4>
+            <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
+              <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">Google Cloud Console</a></li>
+              <li>Create a new project or select existing one</li>
+              <li>Enable the Google Drive API</li>
+              <li>Create OAuth 2.0 credentials (Web Application)</li>
+              <li>Add your site URL to Authorized JavaScript origins</li>
+              <li>Copy the Client ID and paste above</li>
+            </ol>
           </div>
 
           {gdStatus === 'connected' && (
